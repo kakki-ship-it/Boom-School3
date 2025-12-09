@@ -108,10 +108,16 @@
             background: rgba(0, 0, 0, 0.7);
             display: none;
             flex-direction: column;
-            justify-content: center;
+            justify-content: flex-start;
             align-items: center;
             pointer-events: auto;
             z-index: 100;
+            overflow-y: auto;
+            /* Enable scrolling */
+            padding: 40px 0;
+            /* Add top/bottom padding */
+            box-sizing: border-box;
+            /* Ensure padding is included in width/height */
         }
 
         .card-container {
@@ -457,6 +463,32 @@
         assets['invader5'] = createInvaderTexture(INVADER_PATTERNS[4]);
         assets['invader6'] = createInvaderTexture(INVADER_PATTERNS[5]);
         assets['boss_yasha'] = createInvaderTexture(BOSS_PATTERN);
+
+        // --- Sprite Cache for Tinting ---
+        const spriteCache = {};
+        function getTintedSprite(type, hue, lightness = 50) {
+            // Round hue to nearest 5 to reduce cache hits if hue floats slightly
+            // But logic uses int steps mostly.
+            hue = Math.floor(hue);
+            const key = `${type}_${hue}_${lightness}`;
+            if (spriteCache[key]) return spriteCache[key];
+
+            const source = assets[type];
+            if (!source) return null;
+
+            const canvas = document.createElement('canvas');
+            canvas.width = source.width;
+            canvas.height = source.height;
+            const ctx = canvas.getContext('2d');
+
+            ctx.drawImage(source, 0, 0);
+            ctx.globalCompositeOperation = 'source-in';
+            ctx.fillStyle = `hsl(${hue}, 100%, ${lightness}%)`;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            spriteCache[key] = canvas;
+            return canvas;
+        }
 
 
         // --- Visual Particle System ---
@@ -1320,19 +1352,28 @@
                             if (Math.floor(Date.now() / 200) % 2 === 0) hVal = 300;
                         }
 
-                        // Apply Filters
-                        if (lVal > 60) ctx.filter = `brightness(2) hue-rotate(${hVal}deg)`;
-                        else {
-                            // Bright Red Base for shadow ensures the result is bright
-                            const shadowColor = `hsl(0, 100%, 60%)`;
-                            // BOOST: Brightness 1.5 makes them NEON
-                            ctx.filter = `drop-shadow(0 0 5px ${shadowColor}) hue-rotate(${hVal}deg) saturate(300%) brightness(1.5)`;
+                        if (lVal > 60) hVal = (hVal + 180) % 360; // Invert hue for "white" mode? Or just keep it. 
+
+                        // New Tinting Logic replacing ctx.filter
+                        let lightness = 60; // Standard Vivid
+                        if (lVal > 60) lightness = 85; // Flash White/Bright
+                        if (b.plugin.hp / b.plugin.maxHp <= 0.3) lightness = 50; // Darker red?
+
+                        // Boss specific override to match original brightness(1.5)
+                        if (b.plugin.isBoss) {
+                            lightness = (Math.floor(Date.now() / 200) % 2 === 0) ? 70 : 50;
+                            // The hue oscillation is handled by hVal above (0 or 300)
                         }
 
-                        if (b.plugin.isBoss) ctx.filter += ` brightness(1.5)`;
+                        const sprite = getTintedSprite(b.plugin.type, hVal, lightness);
 
-                        ctx.drawImage(img, -w / 2, -h / 2, w, h);
-                        ctx.filter = 'none';
+                        if (sprite) {
+                            ctx.shadowColor = `hsl(${hVal}, 100%, 70%)`;
+                            ctx.shadowBlur = 10;
+                            ctx.drawImage(sprite, -w / 2, -h / 2, w, h);
+                            ctx.shadowBlur = 0;
+                        }
+
                         ctx.globalAlpha = 1.0;
                     } else {
                         // Fallback square
