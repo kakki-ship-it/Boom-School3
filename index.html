@@ -63,7 +63,7 @@
         #progress-bar {
             width: 0%;
             height: 100%;
-            background: linear-gradient(90deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);
+            background: linear-gradient(90deg, #00FFFF 0%, #E0FFFF 99%, #E0FFFF 100%);
             transition: width 0.2s;
         }
 
@@ -985,7 +985,7 @@
             const enemy = createEnemy(type, x, y, w, hp);
             enemy.plugin.spawnTimer = 20;
 
-            Body.setVelocity(enemy, { x: (Math.random() - 0.5) * 10, y: 10 });
+            Body.setVelocity(enemy, { x: (Math.random() - 0.5) * 5, y: 2 });
             Body.setAngularVelocity(enemy, (Math.random() - 0.5) * 0.2);
             Composite.add(engine.world, enemy);
         }
@@ -1086,6 +1086,9 @@
                             // Slow drift down, slight nudge
                             if (body.velocity.y < 0.5) Body.applyForce(body, body.position, { x: 0, y: 0.0002 * body.mass });
                         }
+
+                        // Safety: Clamp downward velocity
+                        if (body.velocity.y > 2) Body.setVelocity(body, { x: body.velocity.x, y: 2 });
                     }
 
                     if (!body.isSensor && body.position.y > player.position.y - 70) {
