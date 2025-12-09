@@ -206,6 +206,57 @@
             transform: translate(2px, 2px);
             box-shadow: 2px 2px 0px #000;
         }
+
+        /* Responsive Upgrade Cards for Mobile */
+        @media (max-width: 600px) {
+            #upgrade-overlay {
+                justify-content: center;
+                /* Center vertically on mobile */
+                padding: 10px;
+            }
+
+            .card-container {
+                flex-direction: column;
+                align-items: center;
+                gap: 10px;
+                width: 100%;
+            }
+
+            .card {
+                width: 90%;
+                height: auto;
+                min-height: 80px;
+                flex-direction: row;
+                /* Horizontal layout */
+                justify-content: flex-start;
+                padding: 10px;
+                text-align: left;
+                box-shadow: 3px 3px 0px #000;
+            }
+
+            .card-icon {
+                font-size: 30px;
+                margin-right: 15px;
+                min-width: 40px;
+                text-align: center;
+            }
+
+            .card-content-wrapper {
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+            }
+
+            .card-title {
+                font-size: 16px;
+                margin-bottom: 5px;
+            }
+
+            .card-desc {
+                font-size: 12px;
+                line-height: 1.2;
+            }
+        }
     </style>
 </head>
 
@@ -1198,7 +1249,7 @@
                 if (u.id === 'pierce') desc = `Current: Pierce ${gameState.upgrades.pierceCount}.Add + 1!`;
                 if (u.id === 'explosive') desc = `Level ${gameState.upgrades.explosiveLevel}. Radius UP!`;
                 if (u.id === 'giant') desc = `You have ${gameState.upgrades.giantCount}. Add another!`;
-                card.innerHTML = `<div class="card-icon">${u.icon}</div><div class="card-title">${u.name}</div><div class="card-desc">${desc}</div>`;
+                card.innerHTML = `<div class="card-icon">${u.icon}</div><div class="card-content-wrapper"><div class="card-title">${u.name}</div><div class="card-desc">${desc}</div></div>`;
                 card.onclick = () => applyUpgrade(u);
                 container.appendChild(card);
             });
