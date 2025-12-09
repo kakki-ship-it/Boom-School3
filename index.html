@@ -545,7 +545,7 @@
         // --- Visual Particle System ---
         const particles = [];
         function createParticle(x, y, color, size, speed, life) {
-            if (particles.length > 800) particles.shift();
+            if (particles.length > 200) particles.shift(); // Optimized limit
             const angle = Math.random() * Math.PI * 2;
             const vel = Math.random() * speed;
             particles.push({
@@ -1039,6 +1039,7 @@
                 triggerNextWave();
             }
 
+            // Optimize: cache allBodies once per frame
             const allBodies = Composite.allBodies(engine.world);
             let reachedBottom = false;
 
@@ -1406,7 +1407,7 @@
                         if (lVal > 60) hVal = (hVal + 180) % 360; // Invert hue for "white" mode? Or just keep it. 
 
                         // New Tinting Logic replacing ctx.filter
-                        let lightness = 60; // Standard Vivid
+                        let lightness = 70; // Brightened base to 70 (was 60) to compensate for no shadow
                         if (lVal > 60) lightness = 85; // Flash White/Bright
                         if (b.plugin.hp / b.plugin.maxHp <= 0.3) lightness = 50; // Darker red?
 
@@ -1419,10 +1420,8 @@
                         const sprite = getTintedSprite(b.plugin.type, hVal, lightness);
 
                         if (sprite) {
-                            ctx.shadowColor = `hsl(${hVal}, 100%, 70%)`;
-                            ctx.shadowBlur = 10;
+                            // removed shadowBlur for performance
                             ctx.drawImage(sprite, -w / 2, -h / 2, w, h);
-                            ctx.shadowBlur = 0;
                         }
 
                         ctx.globalAlpha = 1.0;
