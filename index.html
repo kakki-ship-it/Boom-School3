@@ -1099,7 +1099,7 @@
                         if (body.velocity.y > 2) Body.setVelocity(body, { x: body.velocity.x, y: 2 });
                     }
 
-                    if (!body.isSensor && body.position.y > player.position.y - 70) {
+                    if (!body.isSensor && body.position.y > player.position.y) {
                         reachedBottom = true;
                     }
                 }
