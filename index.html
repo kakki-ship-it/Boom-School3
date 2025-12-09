@@ -887,7 +887,14 @@
             const w = (canvasWidth - 20) / cols;
             const size = w * 0.9;
             const baseHp = 1 + Math.floor(gameState.kills / 20);
-            const rows = Math.min(12, 4 + Math.floor(gameState.kills / 40));
+            // Dynamic Row Limit based on Screen Height
+            // Player is at canvasHeight - 50. Warning zone starts around -70 from player.
+            // Lowest enemy spawns at approx: 80 + (rows * (size + 10))
+            const safeY = player.position.y - 200; // Keep 200px buffer
+            const rowHeight = size + 10;
+            const maxRowsFit = Math.floor((safeY - 80) / rowHeight);
+
+            const rows = Math.min(Math.max(3, maxRowsFit), Math.min(12, 4 + Math.floor(gameState.kills / 40)));
 
             const enemiesToSpawn = [];
 
@@ -1006,6 +1013,7 @@
         }, { passive: false });
 
         function update() {
+            if (gameState.screen === 'gameover_freeze') return; // Freeze physics
             if (gameState.screen !== 'playing') return;
 
             updateParticles();
@@ -1101,7 +1109,18 @@
                 }
             });
 
-            if (reachedBottom) { triggerGameOver("GAME OVER"); return; }
+            if (reachedBottom) {
+                // Find the lowest enemy
+                let lowest = null;
+                let maxY = -9999;
+                allBodies.forEach(b => {
+                    if (b.label === 'enemy' && !b.isSensor) {
+                        if (b.position.y > maxY) { maxY = b.position.y; lowest = b; }
+                    }
+                });
+                triggerGameOver("GAME OVER", lowest);
+                return;
+            }
 
             gameState.time++;
             const remainingFrames = gameState.maxTime - gameState.time;
@@ -1118,11 +1137,50 @@
             if (gameState.kills >= gameState.nextLevelKills) triggerUpgrade();
         }
 
-        function triggerGameOver(reason) {
-            gameState.screen = 'gameover';
-            gameState.running = false;
+        function triggerGameOver(reason, offenderEnemy = null) {
+            gameState.screen = 'gameover_freeze';
+            gameState.killerEnemy = offenderEnemy;
             document.getElementById('game-over-screen').querySelector('h1').innerText = reason;
             document.getElementById('final-score').innerText = `Total Kills: ${gameState.kills} \nMax Wave: ${gameState.wave} `;
+
+            // Add "Tap to Continue" hint if not present
+            let hint = document.getElementById('freeze-hint');
+            if (!hint) {
+                hint = document.createElement('div');
+                hint.id = 'freeze-hint';
+                hint.style.cssText = "position:absolute; bottom: 20%; width:100%; text-align:center; color:white; font-size:24px; font-weight:bold; animation: blink 1s infinite; text-shadow: 2px 2px 0 #000;";
+                hint.innerText = "TAP TO CONTINUE";
+                document.getElementById('game-container').appendChild(hint);
+
+                // Add blink keyframes if not exists
+                if (!document.getElementById('blink-style')) {
+                    const style = document.createElement('style');
+                    style.id = 'blink-style';
+                    style.innerHTML = `@keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }`;
+                    document.head.appendChild(style);
+                }
+            }
+            hint.style.display = 'block';
+
+            // Add one-time click listener to proceed
+            setTimeout(() => {
+                const proceed = () => {
+                    if (gameState.screen === 'gameover_freeze') {
+                        showResultScreen();
+                        const h = document.getElementById('freeze-hint');
+                        if (h) h.style.display = 'none';
+                    }
+                    document.removeEventListener('click', proceed);
+                    document.removeEventListener('touchstart', proceed);
+                };
+                document.addEventListener('click', proceed);
+                document.addEventListener('touchstart', proceed);
+            }, 500); // Small delay to prevent accidental double taps
+        }
+
+        function showResultScreen() {
+            gameState.screen = 'gameover';
+            gameState.running = false;
             document.getElementById('game-over-screen').style.display = 'flex';
         }
 
@@ -1301,7 +1359,31 @@
 
         Events.on(render, 'afterRender', function () {
             const ctx = render.context;
-            if (gameState.screen === 'playing') drawParticles(ctx);
+
+            if (gameState.screen === 'gameover_freeze') {
+                // Dim background
+                ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
+                ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+                // Highlight Killer
+                if (gameState.killerEnemy) {
+                    const k = gameState.killerEnemy;
+                    if (Date.now() % 500 < 250) {
+                        ctx.strokeStyle = "#FF0000";
+                        ctx.lineWidth = 5;
+                        ctx.beginPath();
+                        ctx.arc(k.position.x, k.position.y, 60, 0, Math.PI * 2);
+                        ctx.stroke();
+                    } else {
+                        ctx.fillStyle = "rgba(255, 0, 0, 0.5)";
+                        ctx.beginPath();
+                        ctx.arc(k.position.x, k.position.y, 60, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+            }
+
+            if (gameState.screen === 'playing' || gameState.screen === 'gameover_freeze') drawParticles(ctx);
 
             // Player
             if (player && gameState.screen === 'playing') {
