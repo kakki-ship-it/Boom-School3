@@ -1143,6 +1143,12 @@
             document.getElementById('game-over-screen').querySelector('h1').innerText = reason;
             document.getElementById('final-score').innerText = `Total Kills: ${gameState.kills} \nMax Wave: ${gameState.wave} `;
 
+            if (reason === "TIME UP") {
+                showResultScreen();
+                return;
+            }
+
+
             // Add "Tap to Continue" hint if not present
             let hint = document.getElementById('freeze-hint');
             if (!hint) {
